@@ -1,0 +1,160 @@
+# EchoDino stage 1: initialize from DINOv3 ViT-L/16 weights.
+# 30 epochs x 1,000 optimizer updates x 5 accumulation steps = 150,000 training steps.
+# Replace the descriptive path placeholders below before training.
+MODEL:
+  META_ARCHITECTURE: SSLMetaArch
+  DEVICE: cuda
+  WEIGHTS: ''
+  DTYPE: float32
+compute_precision:
+  param_dtype: bf16
+  reduce_dtype: fp32
+  sharding_strategy: SHARD_GRAD_OP
+dino:
+  loss_weight: 1.0
+  global_ignore_diagonal: true
+  head_n_prototypes: 65536
+  head_bottleneck_dim: 256
+  head_norm_last_layer: false
+  head_nlayers: 3
+  head_hidden_dim: 2048
+  koleo_loss_weight: 0.1
+  koleo_loss_distributed: false
+  koleo_topk: 1
+  koleo_distributed_replicas: 0
+  force_weight_norm: false
+ibot:
+  loss_weight: 1.0
+  mask_sample_probability: 0.5
+  mask_ratio_min_max:
+  - 0.1
+  - 0.5
+  mask_random_circular_shift: false
+  force_masking_even_with_zero_weight: false
+  separate_head: true
+  head_n_prototypes: 65536
+  head_bottleneck_dim: 256
+  head_norm_last_layer: false
+  head_nlayers: 3
+  head_hidden_dim: 2048
+train:
+  batch_size_per_gpu: 48
+  dataset_path: 'echodino:root=path to the pretraining image list:extra=unused' # Replace root with the image-list text file path; extra is unused.
+  output_dir: 'path to the EchoDino training output directory'
+  saveckp_freq: 1
+  seed: 0
+  num_workers: 4
+  OFFICIAL_EPOCH_LENGTH: 1000 # update number for one epoch
+  gradient_accumulation: 5  # gradient_accumulation steps for one update
+  monitor_gradient_norm: false
+  chunk_schedule: []
+  cache_dataset: true
+  use_teacher_head: true
+  learn_from_teacher_tokens: false
+  centering: sinkhorn_knopp
+  checkpointing: false
+  compile: true
+  cudagraphs: false
+  cell_augmentation: false
+  cell_augmentation_type: hpa
+student:
+  arch: vit_large
+  patch_size: 16
+  drop_path_rate: 0.3
+  layerscale: 1.0e-05
+  patch_drop: 0.0
+  pretrained_weights: ''
+  ffn_layer: mlp
+  ffn_ratio: 4.0
+  resume_from_teacher_chkpt: ''
+  resume_from_plain_chkpt: 'path to the pretrained DINOv3 ViT-L/16 model checkpoint'
+  qkv_bias: true
+  proj_bias: true
+  ffn_bias: true
+  norm_layer: layernorm
+  n_storage_tokens: 4
+  interpolate_offset: 0.0
+  interpolate_antialias: true
+  mask_k_bias: true
+  in_chans: 3
+#  pos_embed_type: rope
+#  pos_embed_rope_base: 100.0
+#  pos_embed_rope_min_period: null
+#  pos_embed_rope_max_period: null
+#  pos_embed_rope_normalize_coords: separate  # min, max, separate
+#  pos_embed_rope_shift_coords: null
+#  pos_embed_rope_jitter_coords: null
+#  pos_embed_rope_rescale_coords: null
+#  pos_embed_rope_dtype: bf16
+#  fp8_enabled: False  # Convert Linear layers to operate in fp8 precision
+#  fp8_filter: "blocks"
+  pos_embed_grid_size: 48
+  pos_embed_type: ropenew
+  pos_embed_rope_base: 100.0
+  pos_embed_rope_gamma: 1.0
+  pos_embed_rope_min_period: null
+  pos_embed_rope_max_period: null
+  pos_embed_rope_normalize_coords: separate  # min, max, separate
+  pos_embed_rope_shift_coords: null
+  pos_embed_rope_jitter_coords: null
+  pos_embed_rope_rescale_coords: 2
+  pos_embed_rope_dtype: bf16
+  fp8_enabled: False  # Convert Linear layers to operate in fp8 precision
+  fp8_filter: "blocks"  # Regex that must appear in module path; empty means everything
+teacher:
+  momentum_teacher: 0.992
+  final_momentum_teacher: 1
+  warmup_teacher_temp: 0.04
+  teacher_temp: 0.07
+  warmup_teacher_temp_epochs: 30
+  in_chans: 3
+distillation:
+  enabled: false
+  full_cfg_path: ''
+  checkpoint_path: ''
+multidistillation:
+  enabled: false
+hrft:
+  enabled: false
+  checkpoint_path: ''
+optim:
+  epochs: 30
+  optimizer: adamw
+  weight_decay: 0.04
+  weight_decay_end: 0.4
+  lr: 0.001
+  warmup_epochs: 2
+  min_lr: 1.0e-06
+  clip_grad: 3.0
+  freeze_last_layer_epochs: 1
+  scaling_rule: sqrt_wrt_1024
+  patch_embed_lr_mult: 0.2
+  dino_head_wd_multiplier: 1.0
+  layerwise_decay: 0.9
+  multi_tensor_optim: true
+  dump_fsdp_weights_path: ''
+  adamw_beta1: 0.9
+  adamw_beta2: 0.999
+crops:
+  global_crops_scale:
+  - 0.5
+  - 1.0
+  local_crops_number: 8
+  local_crops_scale:
+  - 0.1
+  - 0.5
+  global_crops_size: 256
+  local_crops_size: 96
+  localcrops_subset_of_globalcrops: false
+  share_color_jitter: false
+  horizontal_flips: false
+evaluation:
+  eval_period_iterations: 1000 # w.r.t. global
+  low_freq_every: 2
+  config_files:
+    high_freq: benchmark_high_frequency.yaml
+    low_freq: benchmark_low_frequency.yaml
+checkpointing:
+  period: 1000 # w.r.t. global
+  max_to_keep: 3
+  keep_every: 5000
