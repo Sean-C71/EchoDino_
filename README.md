@@ -4,7 +4,7 @@
 
 Sheng Cheng, Donnchadh M. O'Sullivan, Daniel J. Penny, Craig G. Rusin, Minh B. Nguyen, and Devika Subramanian.
 
-**Contents:** [Paper](#paper) · [Examples](#examples) · [Install](#installation) · [Training](#training)
+**Contents:** [Paper](https://arxiv.org/pdf/2610.05603) · [Examples](#examples) · [Install](#installation) · [Training](#training)
 
 ## Abstract
 
@@ -181,6 +181,10 @@ Iteration names are zero-based. The stage-1 endpoint is `training_149999`, and t
 ```text
 /path/to/echodino_output/eval/training_299999/teacher_checkpoint.pth
 ```
+
+### Pretrained models
+
+Our pretrained models will be made available upon acceptance.
 
 ## Acknowledgments and license
 
